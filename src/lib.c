@@ -1,4 +1,7 @@
+#define _GNU_SOURCE
 #include "lib.h"
+#include <sys/uio.h>
+#include <errno.h>
 
 char *get_file_data(char *file_name)
 {
@@ -29,21 +32,71 @@ char *get_file_data(char *file_name)
 
 int read_memory(int pid, unsigned long addr, void *buf, size_t len)
 {
-    char path[64];
-    snprintf(path, sizeof(path), "/proc/%d/mem", pid);
+    struct iovec local[1];
+    struct iovec remote[1];
     
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) return -1;
+    local[0].iov_base = buf;
+    local[0].iov_len = len;
+    remote[0].iov_base = (void *)addr;
+    remote[0].iov_len = len;
     
-    if (lseek(fd, addr, SEEK_SET) == -1) {
-        close(fd);
-        return -1;
+    ssize_t n = process_vm_readv(pid, local, 1, remote, 1, 0);
+    if (n == -1) {
+        printf("  error: %s (pid=%d, addr=0x%lx, len=%zu)\n", strerror(errno), pid, addr, len);
     }
-    
-    ssize_t n = read(fd, buf, len);
-    close(fd);
-
     return (n == (ssize_t)len) ? 0 : -1;
+}
+
+int write_memory(int pid, unsigned long addr, void *buf, size_t len)
+{
+    struct iovec local[1];
+    struct iovec remote[1];
+    
+    local[0].iov_base = buf;
+    local[0].iov_len = len;
+    remote[0].iov_base = (void *)addr;
+    remote[0].iov_len = len;
+    
+    ssize_t n = process_vm_writev(pid, local, 1, remote, 1, 0);
+    return (n == (ssize_t)len) ? 0 : -1;
+}
+
+void scan_memory(int pid, MemRegion *regions, int value)
+{
+    printf("Scanning for value: %d\n", value);
+    int count = 0;
+    int region_num = 0;
+    
+    while (regions) {
+        unsigned long size = regions->end - regions->start;
+        unsigned char *buf = malloc(size);
+        
+        if (!buf) {
+            regions = regions->next;
+            region_num++;
+            continue;
+        }
+        
+        int res = read_memory(pid, regions->start, buf, size);
+        if (res != 0) {
+            free(buf);
+            regions = regions->next;
+            region_num++;
+            continue;
+        }
+        
+        for (unsigned long i = 0; i <= size - sizeof(int); i++) {
+            int *ptr = (int *)(buf + i);
+            if (*ptr == value) {
+                printf("Found: 0x%lx = %d\n", regions->start + i, value);
+                count++;
+            }
+        }
+        free(buf);
+        regions = regions->next;
+        region_num++;
+    }
+    printf("Total matches: %d\n", count);
 }
 
 MemRegion *get_memory_regions(int pid, char *mode)

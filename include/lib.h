@@ -3,6 +3,7 @@
 
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/uio.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,8 +17,12 @@ struct MemRegion;
 // Get proc attributes
 char *get_file_data(char *file_name);
 int read_memory(int pid, unsigned long addr, void *buf, size_t len);
+int write_memory(int pid, unsigned long addr, void *buf, size_t len);
 
 // Get proc memory info
 MemRegion *get_memory_regions(int pid, char *mode);
+
+// Scan memory for a value
+void scan_memory(int pid, MemRegion *regions, int value);
 
 #endif

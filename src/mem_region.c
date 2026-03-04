@@ -62,7 +62,7 @@ MemRegion *pop_front(MemRegion **head)
     return temp;
 }
 
-void free_list(MemRegion *head)
+void free_mem(MemRegion *head)
 {
     while (head) {
         MemRegion *temp = head;
@@ -76,8 +76,9 @@ void print_mem_region(MemRegion *head)
 {
     int i = 0;
     while (head) {
-        printf("[%d] 0x%lx - 0x%lx (%s)\n", i++, 
-			head->start, head->end, head->perms);
+		printf("[%d] 0x%lx - 0x%lx (%s) - %lu bytes\n", i++, 
+    		head->start, head->end, head->perms, head->end - head->start);
         head = head->next;
     }
 }
+
