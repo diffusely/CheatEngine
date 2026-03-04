@@ -4,7 +4,10 @@
 #include "mem_region.h"
 #include "lib.h"
 
+
+#define MAX_SAVED 5000
 #define MAX_PIDS 100
+
 
 typedef struct {
 	int pids[MAX_PIDS];

@@ -39,12 +39,50 @@ sudo ./cheatengine test
 ```
 [1] Select PID      - Choose which process to work with
 [2] Scan value      - Search for a value in memory
-[3] Write value     - Change a value at an address
-[4] Refresh PIDs    - Update the process list
-[5] Exit            - Quit the program
+[3] Diff scan       - Smart scan with address tracking
+[4] Reset diff      - Clear saved addresses
+[5] Write value     - Change a value at an address
+[6] Refresh PIDs    - Update the process list
+[0] Exit            - Quit the program
 ```
 
-## How to Find the Right Address
+## Diff Scan (Recommended)
+
+The **Diff scan** feature makes finding addresses much easier:
+
+1. **First diff scan** - Enter the current value (e.g., 100 HP)
+   - Saves all addresses containing that value
+
+2. **Change value in game** - Take damage, now 90 HP
+
+3. **Second diff scan** - Enter the new value (90)
+   - Only shows addresses that changed from 100 → 90
+
+4. **Repeat** until you find the exact address
+
+### Example
+
+```
+[3] Diff scan (0 saved)
+> 3
+Enter value: 100
+Saved 847 addresses
+
+# Take damage in game...
+
+[3] Diff scan (847 saved)
+> 3
+Enter value: 90
+MATCH: 0x7fff1234 = 90
+Remaining: 1
+
+> 5
+Enter address: 7fff1234
+Enter new value: 9999
+Done!
+```
+
+## How to Find the Right Address (Manual Method)
 
 Finding the correct memory address takes multiple scans:
 

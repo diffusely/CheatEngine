@@ -54,6 +54,65 @@ static void refresh(char *name, PidList *list)
 		printf("No processes found!\n");
 }
 
+// TO DO
+static unsigned long saved_addrs[MAX_SAVED];
+static int saved_count = 0;
+
+static void scan_diff(MemRegion *mem, int pid)
+{
+	if (pid == -1) {
+		printf("Select PID first!\n");
+		return;
+	}
+	
+	printf("Enter value: ");
+	int val;
+	scanf("%d", &val);
+	
+	if (saved_count == 0) {
+		printf("First scan for %d...\n", val);
+		while (mem && saved_count < MAX_SAVED) {
+			unsigned long size = mem->end - mem->start;
+			unsigned char *buf = malloc(size);
+			if (buf && read_memory(pid, mem->start, buf, size) == 0) {
+				for (unsigned long i = 0; i <= size - sizeof(int) && saved_count < MAX_SAVED; i++) {
+					int *ptr = (int *)(buf + i);
+					if (*ptr == val) {
+						saved_addrs[saved_count++] = mem->start + i;
+					}
+				}
+			}
+			if (buf) free(buf);
+			mem = mem->next;
+		}
+		printf("Saved %d addresses\n", saved_count);
+	} else {
+		printf("Comparing %d addresses for value %d...\n", saved_count, val);
+		int new_count = 0;
+		for (int i = 0; i < saved_count; i++) {
+			int cur;
+			if (read_memory(pid, saved_addrs[i], &cur, sizeof(int)) == 0) {
+				if (cur == val) {
+					printf("MATCH: 0x%lx = %d\n", saved_addrs[i], cur);
+					saved_addrs[new_count++] = saved_addrs[i];
+				}
+			}
+		}
+		saved_count = new_count;
+		printf("Remaining: %d\n", saved_count);
+		
+		if (saved_count == 0) {
+			printf("No matches! Resetting...\n");
+		}
+	}
+}
+
+static void reset_diff(void)
+{
+	saved_count = 0;
+	printf("Diff reset!\n");
+}
+
 int run(char **argv)
 {
 	PidList list;
@@ -72,9 +131,11 @@ int run(char **argv)
 	while (running) {
 		printf("\n[1] Select PID\n");
 		printf("[2] Scan value\n");
-		printf("[3] Write value\n");
-		printf("[4] Refresh PIDs\n");
-		printf("[5] Exit\n");
+		printf("[3] Diff scan (%d saved)\n", saved_count);
+		printf("[4] Reset diff\n");
+		printf("[5] Write value\n");
+		printf("[6] Refresh PIDs\n");
+		printf("[0] Exit\n");
 		printf("> ");
 
 		int choice;
@@ -90,14 +151,22 @@ int run(char **argv)
 				break;
 			}
 			case 3: {
-				memory_write(pid); 
+				scan_diff(mem, pid);
 				break;
 			}
 			case 4: {
-				refresh(argv[1], &list); 
+				reset_diff();
 				break;
 			}
 			case 5: {
+				memory_write(pid); 
+				break;
+			}
+			case 6: {
+				refresh(argv[1], &list); 
+				break;
+			}
+			case 0: {
 				running = 0; 
 				break;
 			}

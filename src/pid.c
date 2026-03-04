@@ -23,7 +23,7 @@ int get_pid_list(char *name, PidList *list)
 	    char *str = get_file_data(path);
 		
 	    if (str) {
-			if (strcmp(name, str) == 0) {
+			if (strncmp(name, str, strlen(str)) == 0) {
 				list->pids[list->count] = pid;
 				strncpy(list->names[list->count], str, 255);
 				list->count++;

@@ -41,9 +41,6 @@ int read_memory(int pid, unsigned long addr, void *buf, size_t len)
     remote[0].iov_len = len;
     
     ssize_t n = process_vm_readv(pid, local, 1, remote, 1, 0);
-    if (n == -1) {
-        printf("  error: %s (pid=%d, addr=0x%lx, len=%zu)\n", strerror(errno), pid, addr, len);
-    }
     return (n == (ssize_t)len) ? 0 : -1;
 }
 
