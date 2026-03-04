@@ -1,4 +1,4 @@
-# CheatEngine for Linux 🎮
+# CheatEngine for Linux
 
 A simple memory scanner and editor for Linux processes. Find and modify values in running programs.
 
