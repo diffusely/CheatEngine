@@ -193,8 +193,8 @@ static void refresh(char *name, PidList *list)
 		printf("No processes found!\n");
 }
 
-// TO DO
 static unsigned long saved_addrs[MAX_SAVED];
+static Value saved_values[MAX_SAVED];
 static int saved_count = 0;
 
 static void scan_diff(MemRegion *mem, int pid)
@@ -204,13 +204,13 @@ static void scan_diff(MemRegion *mem, int pid)
 		return;
 	}
 	
-	Value val;
-	if (get_value("Enter value", &val, current_type) != 0)
-		return;
-	
 	size_t val_size = type_sizes[current_type];
 	
 	if (saved_count == 0) {
+		Value val;
+		if (get_value("Enter initial value", &val, current_type) != 0)
+			return;
+		
 		printf("First scan for ");
 		print_value(val, current_type);
 		printf("...\n");
@@ -221,7 +221,9 @@ static void scan_diff(MemRegion *mem, int pid)
 			if (buf && read_memory(pid, mem->start, buf, size) == 0) {
 				for (unsigned long i = 0; i <= size - val_size && saved_count < MAX_SAVED; i++) {
 					if (compare_value(buf + i, val, current_type)) {
-						saved_addrs[saved_count++] = mem->start + i;
+						saved_addrs[saved_count] = mem->start + i;
+						saved_values[saved_count] = val;
+						saved_count++;
 					}
 				}
 			}
@@ -229,25 +231,34 @@ static void scan_diff(MemRegion *mem, int pid)
 			mem = mem->next;
 		}
 		printf("Saved %d addresses\n", saved_count);
+		printf("Now change the value in game and run diff scan again!\n");
 	} else {
-		printf("Comparing %d addresses...\n", saved_count);
+		printf("Scanning %d addresses for CHANGED values...\n", saved_count);
 		int new_count = 0;
+		
 		for (int i = 0; i < saved_count; i++) {
 			Value cur;
 			if (read_memory(pid, saved_addrs[i], &cur, val_size) == 0) {
-				if (compare_value(&cur, val, current_type)) {
-					printf("MATCH: 0x%lx = ", saved_addrs[i]);
+				if (!compare_value(&cur, saved_values[i], current_type)) {
+					printf("CHANGED: 0x%lx : ", saved_addrs[i]);
+					print_value(saved_values[i], current_type);
+					printf(" -> ");
 					print_value(cur, current_type);
 					printf("\n");
-					saved_addrs[new_count++] = saved_addrs[i];
+
+					saved_addrs[new_count] = saved_addrs[i];
+					saved_values[new_count] = cur;
+					new_count++;
 				}
 			}
 		}
 		saved_count = new_count;
-		printf("Remaining: %d\n", saved_count);
+		printf("Found %d changed addresses\n", saved_count);
 		
 		if (saved_count == 0) {
-			printf("No matches! Resetting...\n");
+			printf("No changes found! Try changing the value in game.\n");
+		} else {
+			printf("Run diff scan again after changing value to narrow down!\n");
 		}
 	}
 }

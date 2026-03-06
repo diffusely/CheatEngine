@@ -5,7 +5,7 @@
 #include "lib.h"
 
 
-#define MAX_SAVED 5000
+#define MAX_SAVED 200000
 #define MAX_PIDS 100
 
 

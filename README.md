@@ -1,13 +1,14 @@
 # CheatEngine for Linux
 
-A simple memory scanner and editor for Linux processes. Find and modify values in running programs.
+A memory scanner and editor for Linux processes. Find and modify values in running games and programs.
 
 ## Features
 
-**Scan memory** - Find values in process memory
-**Write memory** - Change values at specific addresses
-**PID selection** - Choose from multiple matching processes
-**Refresh PIDs** - Update process list without restarting
+- **Multiple Value Types** - Scan for `int`, `float`, or `double` values
+- **Diff Scan** - Smart "changed value" scanning to narrow down addresses
+- **Memory Write** - Change values at specific addresses
+- **PID Selection** - Choose from multiple matching processes
+- **Input Validation** - Error handling for invalid inputs
 
 ## Build
 
@@ -37,103 +38,105 @@ sudo ./cheatengine test
 ## Menu Options
 
 ```
-[1] Select PID      - Choose which process to work with
-[2] Scan value      - Search for a value in memory
-[3] Diff scan       - Smart scan with address tracking
+=== Type: int ===
+[1] Select PID      - Choose which process to scan
+[2] Scan value      - Search for a specific value
+[3] Diff scan       - Find addresses where value CHANGED
 [4] Reset diff      - Clear saved addresses
-[5] Write value     - Change a value at an address
+[5] Write value     - Modify a value at an address
 [6] Refresh PIDs    - Update the process list
+[7] Change type     - Switch between int/float/double
 [0] Exit            - Quit the program
 ```
 
-## Diff Scan (Recommended)
+## Value Types
 
-The **Diff scan** feature makes finding addresses much easier:
+Press `[7]` to change the value type:
 
-1. **First diff scan** - Enter the current value (e.g., 100 HP)
+| Type | Size | Use For |
+|------|------|---------|
+| `int` | 4 bytes | Health, ammo, coins, score |
+| `float` | 4 bytes | Speed, position, multipliers |
+| `double` | 8 bytes | High-precision values |
+
+## Diff Scan (Recommended Method)
+
+The **Diff scan** finds addresses where the value **CHANGED**:
+
+1. **First scan** - Enter the current value (e.g., health = 100)
    - Saves all addresses containing that value
 
-2. **Change value in game** - Take damage, now 90 HP
+2. **Change value in game** - Take damage, health becomes 95
 
-3. **Second diff scan** - Enter the new value (90)
-   - Only shows addresses that changed from 100 → 90
+3. **Second scan** - No input needed!
+   - Shows addresses where value CHANGED (100 → 95)
 
 4. **Repeat** until you find the exact address
 
-### Example
+### Example: Finding Health
 
 ```
+=== Type: int ===
 [3] Diff scan (0 saved)
-> 3
-Enter value: 100
-Saved 847 addresses
+Enter initial value (int): 100
+Saved 5000 addresses
+Now change the value in game and run diff scan again!
 
-# Take damage in game...
+# Take damage in game... health is now 95
 
-[3] Diff scan (847 saved)
-> 3
-Enter value: 90
-MATCH: 0x7fff1234 = 90
-Remaining: 1
+[3] Diff scan (5000 saved)
+Scanning 5000 addresses for CHANGED values...
+CHANGED: 0x7f1234 : 100 -> 95
+CHANGED: 0x7f5678 : 100 -> 95
+Found 2 changed addresses
 
-> 5
-Enter address: 7fff1234
-Enter new value: 9999
+# Take more damage... health is now 80
+
+[3] Diff scan (2 saved)
+CHANGED: 0x7f1234 : 95 -> 80
+Found 1 changed addresses   <- This is your target!
+
+[5] Write value
+Enter address: 7f1234
+Enter new value (int): 9999
 Done!
 ```
 
-## How to Find the Right Address (Manual Method)
-
-Finding the correct memory address takes multiple scans:
-
-1. **First scan** - Player has 100 HP
-   ```
-   > 2
-   Enter value: 100
-   Found: 0x7fff1234 = 100
-   Found: 0x7fff5678 = 100
-   Found: 0x7fff9abc = 100
-   Total matches: 3
-   ```
-
-2. **Change the value in the target** - Take damage, now 90 HP
-
-3. **Second scan** - Search for new value
-   ```
-   > 2
-   Enter value: 90
-   Found: 0x7fff1234 = 90
-   Total matches: 1
-   ```
-
-4. **Write new value** - Set health to 9999
-   ```
-   > 3
-   Enter address (0x...): 0x7fff1234
-   Enter new value: 9999
-   Done!
-   ```
-
-5. **Check target program** - Health is now 9999!
-
-## Multiple PIDs
-
-If multiple processes have the same name, you can choose which one:
+### Example: Finding Speed (Float)
 
 ```
-$ sudo ./cheatengine chrome
-[0] PID 1234: chrome
-[1] PID 5678: chrome
-[2] PID 9012: chrome
+[7] Change type
+> 2                         # Select float
 
-> 1
-Enter index [0-2]: 1
-Selected PID 5678 (chrome)
-Ready to scan PID 5678
+[3] Diff scan (0 saved)
+Enter initial value (float): 1.0
+Saved 3000 addresses
+
+# Start running/sprinting in game...
+
+[3] Diff scan (3000 saved)
+CHANGED: 0x623abc : 1.00 -> 1.50
+Found 1 changed addresses
+
+[5] Write value
+Enter address: 623abc
+Enter new value (float): 10.0
+Done!                       # Now you're super fast!
 ```
+
+## Tips for Finding Values
+
+| Value Type | Common Starting Values |
+|------------|------------------------|
+| Health/HP | `100`, `1000`, `100.0` |
+| Speed | `1.0`, `100.0`, `200.0` |
+| Coins/Money | The exact number shown |
+| Position | `0.0`, current X/Y coords |
+| Multiplier | `1.0`, `1.5`, `2.0` |
 
 ## Requirements
 
 - Linux (kernel 3.2+)
 - Root privileges (`sudo`)
 - GCC
+- ncurses library (optional, for TUI version)
